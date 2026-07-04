@@ -59,6 +59,30 @@ test("wrapper dir exempts its own module but keeps React Query restricted", () =
   assert.ok(pathNames.includes("@tanstack/react-query"))
 })
 
+test("data dir bans importing the presentation layer", () => {
+  const config = lyrolabFrontend({ dataQueryDirs: ["queries"] })
+  const dqEntry = config.find((c) => c.files?.[0] === "**/queries/**")
+  const patterns = dqEntry.rules["no-restricted-imports"][1].patterns
+  const groups = patterns.flatMap((p) => p.group)
+  assert.ok(groups.includes("**/components/**"))
+  assert.ok(groups.includes("**/pages/**"))
+})
+
+test("max-lines-per-function is a warn at the configured threshold", () => {
+  const base = baseGroup(lyrolabFrontend())
+  const rule = base.rules["max-lines-per-function"]
+  assert.equal(rule[0], "warn")
+  assert.equal(rule[1].max, 150)
+
+  const custom = baseGroup(lyrolabFrontend({ maxLinesPerFunction: 200 }))
+  assert.equal(custom.rules["max-lines-per-function"][1].max, 200)
+})
+
+test("max-lines-per-function can be disabled", () => {
+  const base = baseGroup(lyrolabFrontend({ maxLinesPerFunction: false }))
+  assert.equal(base.rules["max-lines-per-function"], undefined)
+})
+
 test("typeChecked adds parserOptions.projectService", () => {
   const config = lyrolabFrontend({ typeChecked: true })
   const tc = config.find(

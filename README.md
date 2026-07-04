@@ -27,17 +27,20 @@ export default lyrolabFrontend({
 
 Options:
 
-| Option                     | Default            | Purpose                                                                                    |
-| -------------------------- | ------------------ | ------------------------------------------------------------------------------------------ |
-| `dataQueryDirs`            | `["data/queries"]` | Dirs where React Query hooks may be imported. Everywhere else, importing them is an error. |
-| `restrictedWrapperImports` | `[]`               | Modules confined to one dir (e.g. `posthog-js` → `modules/analytics`).                     |
-| `typeChecked`              | `false`            | Enables the type-checked tier (`no-floating-promises`, etc.). Set `tsconfigRootDir` too.   |
-| `ignores`                  | `[]`               | Extra ignore globs (generated files, build output).                                        |
-| `extend`                   | `[]`               | Extra flat configs appended after the preset.                                              |
+| Option                     | Default            | Purpose                                                                                                                |
+| -------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `dataQueryDirs`            | `["data/queries"]` | Dirs where React Query hooks may be imported. These dirs are also the data layer and may not import presentation code. |
+| `restrictedWrapperImports` | `[]`               | Modules confined to one dir (e.g. an analytics client → its wrapper dir).                                              |
+| `maxLinesPerFunction`      | `150`              | Warn threshold for function length. Pass `false` to disable.                                                           |
+| `typeChecked`              | `false`            | Enables the type-checked tier (`no-floating-promises`, etc.). Set `tsconfigRootDir` too.                               |
+| `ignores`                  | `[]`               | Extra ignore globs (generated files, build output).                                                                    |
+| `extend`                   | `[]`               | Extra flat configs appended after the preset.                                                                          |
 
 The preset bundles: `@eslint/js` recommended, `typescript-eslint`, `eslint-plugin-react-hooks`
-(rules-of-hooks + exhaustive-deps), `react/no-multi-comp`, `@tanstack/eslint-plugin-query`,
-Prettier, and the architecture guardrails that confine React Query and wrapper-only imports.
+(rules-of-hooks + exhaustive-deps), `react/no-multi-comp` (one component per file),
+`max-lines-per-function` (warn), `@tanstack/eslint-plugin-query`, Prettier, and the architecture
+guardrails: React Query and wrapper-only imports are confined to their dirs, and the data layer
+may not import the presentation layer (`components/`, `pages/`, `entrypoints/`, `layout/`).
 
 ### Prettier (`prettier.config.mjs`)
 

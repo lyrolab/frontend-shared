@@ -10,10 +10,15 @@ export interface RestrictedWrapperImport {
 }
 
 export interface LyrolabFrontendOptions {
-  /** Dirs where React Query hooks may be imported. Default: ["data/queries"]. */
+  /**
+   * Dirs where React Query hooks may be imported. These dirs are also treated as
+   * the data layer and may not import presentation code. Default: ["data/queries"].
+   */
   dataQueryDirs?: string[]
   /** Modules confined to a single wrapper dir. */
   restrictedWrapperImports?: RestrictedWrapperImport[]
+  /** Warn threshold for function length (default 150). Pass false to disable. */
+  maxLinesPerFunction?: number | false
   /** Enable the type-checked tier (`no-floating-promises`, etc.). */
   typeChecked?: boolean
   /** Root dir for type-checked parsing. */

@@ -148,8 +148,10 @@ The **only** place React Query and the API client are touched.
 ## 8. Tooling & conventions
 
 - **ESLint:** consume the shared preset — `import { lyrolabFrontend } from "@lyrolab/frontend-shared/eslint"`.
-  It provides `typescript-eslint` + `react-hooks` + Prettier + the architecture guardrails
-  (`no-restricted-imports` confining RQ hooks to `data/queries/`). See the README for options.
+  It provides `typescript-eslint` + `react-hooks` + Prettier + the architecture guardrails:
+  React Query hooks are confined to `data/queries/`, the **data layer may not import the
+  presentation layer** (`components/`, `pages/`, `entrypoints/`, `layout/`), one component per
+  file is enforced, and functions over ~150 lines warn. See the README for options.
 - **Prettier:** the shared config. Never hand-fix formatting — run the project's format script.
 - **tsconfig:** extend `@lyrolab/frontend-shared/tsconfig`; keep `strict: true` and path aliases.
 - **Commits:** conventional commits (enforced by commitlint/husky at the repo root).
