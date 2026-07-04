@@ -35,6 +35,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+      # semantic-release computes the version, writes it to package.json (npmPublish:false),
+      # and creates the git tag + GitHub Release. It does not publish to npm.
       - run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Publish via npm Trusted Publishing (OIDC). No custom env block here, so the
+      # id-token request vars are present. Skips when semantic-release made no release.
+      - name: Publish to npm (OIDC)
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" = "0.0.0-semantically-released" ]; then
+            echo "No release this run; nothing to publish."
+            exit 0
+          fi
+          echo "Publishing $VERSION"
+          npm publish --loglevel verbose
