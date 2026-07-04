@@ -23,6 +23,11 @@ jobs:
 
       # Trusted Publishing (OIDC) needs npm >= 11.5.
       - run: npm install -g npm@latest
+      - name: Diagnostics
+        run: |
+          node -v
+          npm -v
+          echo "OIDC request url present: ${ACTIONS_ID_TOKEN_REQUEST_URL:+yes}"
 
       - run: npm ci
       - run: npm run format:check
