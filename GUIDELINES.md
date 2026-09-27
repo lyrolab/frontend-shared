@@ -3,8 +3,9 @@
 The shared, UI-agnostic architecture contract for Lyrolab web frontends. The ESLint preset in this
 package mechanically enforces the parts that can be enforced; this document is the full contract.
 
-Scope: architecture, data layer, forms, state, testing, tooling. Out of scope: which UI library to
-use, styling conventions, and i18n — those stay per-project.
+Scope: architecture, data layer, forms, state, testing, UI components, i18n, Storybook, tooling
+and workspaces. Out of scope: which UI library to use and styling conventions — those stay
+per-project.
 
 ---
 
@@ -145,7 +146,58 @@ The **only** place React Query and the API client are touched.
   `container`. No snapshot tests of whole trees; no `fireEvent` where `userEvent` fits.
 - The `test` script must run once in CI (`vitest --run`), and **tests must be a CI gate**.
 
-## 8. Tooling & conventions
+## 8. UI components
+
+- **Composition over inheritance.** Build UI by composing small components: pass content through
+  `children` or named slot props (`header`, `actions`, `icon`) and behaviour through props. No
+  class hierarchies, no "base component" to extend.
+- **No wrapper-variant sprawl.** Don't create `PrimaryButton`, `DangerButton`, `SmallDangerButton`
+  wrappers around one component — expose a `variant`/`size` prop, or compose at the call site.
+- **Keep files tiny.** One component per file. Split into sub-components in a subfolder as soon as
+  a component has a distinct visual block or its own state — well before the lint limits (one
+  component per file, ~150-line functions) kick in.
+  ```tsx
+  const Card = ({ header, actions, children }: CardProps) => (
+    <section>
+      <CardHeader actions={actions}>{header}</CardHeader>
+      {children}
+    </section>
+  )
+  ```
+
+## 9. Internationalization
+
+- **No literal user-facing text in JSX.** Every visible string goes through the translation
+  function (`t("feature.key")`). Enable `i18n: true` in the ESLint preset to enforce it; it
+  flags JSX text only (not attributes like `className`) and skips test and story files.
+- **Keys are namespaced per feature module:** one namespace (or top-level key) per
+  `src/modules/<feature>/`, so a feature's strings move and get deleted with it. Shared strings
+  live in a `common` namespace.
+- **Locale parity is tested.** A unit test asserts every locale has exactly the same key set as
+  the reference locale, so a missing translation fails CI instead of showing a raw key.
+
+## 10. Storybook
+
+- **Stories are co-located** as `Component.stories.tsx` next to `Component.tsx`.
+- **One story file per component** — no catch-all story files for a whole feature.
+- **Stories cover every state** the component can render: default, loading, empty, error,
+  disabled, long content, and each variant. A state without a story is a state nobody reviews.
+- Enable `storybook: true` in the ESLint preset: it applies the Storybook recommended rules to
+  `*.stories.@(ts|tsx)` and relaxes one-component-per-file and function length there, where
+  decorators and render helpers legitimately live beside the stories.
+
+## 11. pnpm workspaces
+
+- **Install from the workspace root** with `pnpm install`; commit `pnpm-lock.yaml`. Add a
+  dependency to one package with `pnpm --filter <package> add <dep>`.
+- **Run scripts per package with filters:** `pnpm --filter <package> test`, or
+  `pnpm -r --filter "./apps/*" build` for a group. Prefer filters over `cd`-ing into packages.
+- **Never rely on hoisting.** Every package declares every dependency it imports; don't enable
+  `shamefully-hoist` or `public-hoist-pattern` to paper over a missing declaration. This preset
+  bundles all of its ESLint plugins as dependencies, so a consuming app only installs `eslint`,
+  `prettier`, `typescript` and the preset.
+
+## 12. Tooling & conventions
 
 - **ESLint:** consume the shared preset — `import { lyrolabFrontend } from "@lyrolab/frontend-shared/eslint"`.
   It provides `typescript-eslint` + `react-hooks` + Prettier + the architecture guardrails:
@@ -154,11 +206,13 @@ The **only** place React Query and the API client are touched.
   file is enforced, and functions over ~150 lines warn. See the README for options.
 - **Prettier:** the shared config. Never hand-fix formatting — run the project's format script.
 - **tsconfig:** extend `@lyrolab/frontend-shared/tsconfig`; keep `strict: true` and path aliases.
+  Set `compilerOptions.types` explicitly (e.g. `["vite/client"]`) — TypeScript 6 no longer
+  includes every `@types/*` package by default.
 - **Commits:** conventional commits (enforced by commitlint/husky at the repo root).
 - **No legacy libraries in new code:** no Formik/Yup (use RHF+Zod), no Bootstrap, no `swr` (use
   React Query). Migrate on touch.
 
-## 9. Quick checklist (PR review)
+## 13. Quick checklist (PR review)
 
 - [ ] New code lives under `src/modules/<feature>/` in the right layer.
 - [ ] Page is a thin `SuspenseErrorBoundary` wrapper — no fetching in it.
@@ -167,5 +221,8 @@ The **only** place React Query and the API client are touched.
 - [ ] DTOs mapped to domain types before reaching components.
 - [ ] Form uses RHF + Zod with the container/presentational split.
 - [ ] One component per file; pure-UI files use `*UI.tsx`.
+- [ ] Components composed via children/slots and props — no inheritance or variant wrappers.
+- [ ] No literal JSX text; new keys added to every locale under the feature namespace.
+- [ ] Co-located story covering every state of a new or changed UI component.
 - [ ] Server state in React Query, client state in Zustand — not mixed.
 - [ ] Test colocated, role-based, MSW-backed; passes in CI.
