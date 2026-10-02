@@ -155,6 +155,15 @@ The **only** place React Query and the API client are touched.
 - Use the exported `login`, `register`, `logout`, and `startAccountAction` helpers instead of
   constructing provider URLs in UI components. Application-specific login screens and account UI
   remain in the consuming project.
+- In-app account pages must use `startAccountAction(userManager, kcAction, args)` for Keycloak AIA
+  (`UPDATE_PASSWORD`, `UPDATE_EMAIL`, `CONFIGURE_TOTP`, `UPDATE_PROFILE`), never the deprecated
+  account-console overload. Keep the redirect at the OIDC callback and set `state.returnTo` to a
+  local Account path. Complete through `createAuthCallbackHandler` to unwrap transaction state.
+- Callback `navigate(path, result?)` receives optional `accountActionStatus` (`success`,
+  `cancelled`, `error`) only after OIDC validation of a stored AIA transaction. Forward only this
+  normalized feedback to the Account page; never raw callback parameters. OIDC errors reject
+  without navigation. Status is feedback, not evidence that MFA or another security policy is
+  satisfied. Verify realm action configuration, especially `UPDATE_EMAIL`, before claiming QA.
 
 ## 7. Testing
 
