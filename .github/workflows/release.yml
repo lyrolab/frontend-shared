@@ -29,6 +29,7 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run build
 
       # semantic-release computes the version, writes it to package.json (npmPublish:false),
       # and creates the git tag + GitHub Release. It does not publish to npm.

@@ -11,6 +11,53 @@ npm i -D @lyrolab/frontend-shared
 
 ## Usage
 
+### Auth runtime (`@lyrolab/frontend-shared/auth`)
+
+Install the runtime peers in the consuming application:
+
+```bash
+pnpm add @lyrolab/frontend-shared @tanstack/react-router axios oidc-client-ts react
+```
+
+Create one user manager from deployment-time OIDC values and inject that same instance into the
+provider, route guards, callback handler, and API interceptor. Session storage is the default;
+pass `storage: "memory"` for ephemeral sessions or server rendering.
+
+```tsx
+import {
+  AuthProvider,
+  createAuthUserManager,
+} from "@lyrolab/frontend-shared/auth"
+
+const userManager = createAuthUserManager({
+  authority: runtimeConfig.oidcAuthority,
+  clientId: runtimeConfig.oidcClientId,
+  redirectUri: `${window.location.origin}/auth/callback`,
+  postLogoutRedirectUri: window.location.origin,
+})
+
+export function Providers() {
+  return (
+    <AuthProvider userManager={userManager}>
+      <App />
+    </AuthProvider>
+  )
+}
+```
+
+Auth is optional until a route opts in. Public pages can call `useCurrentUser()` and show a sign-in
+prompt when it returns `null`; protected TanStack routes use the returned function as their
+`beforeLoad` hook:
+
+```ts
+beforeLoad: requireAuth({ userManager, loginPath: "/sign-in" })
+```
+
+Use `createAuthCallbackHandler(userManager)` in the callback route and install the axios request
+handler with `api.interceptors.request.use(createAuthInterceptor(userManager))`. The subpath also
+exports `login`, `register`, `logout`, and `startAccountAction`; it never logs tokens and stores
+OIDC state only in memory or `sessionStorage`.
+
 ### ESLint (`eslint.config.mjs`)
 
 ```js

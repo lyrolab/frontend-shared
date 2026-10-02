@@ -14,9 +14,16 @@
   },
   "files": [
     "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx",
+    "dist",
     "GUIDELINES.md"
   ],
   "exports": {
+    "./auth": {
+      "types": "./dist/auth/index.d.ts",
+      "import": "./dist/auth/index.js"
+    },
     "./eslint": {
       "types": "./src/eslint/index.d.ts",
       "import": "./src/eslint/index.js"
@@ -26,19 +33,41 @@
     "./guidelines": "./GUIDELINES.md"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
-    "test": "node --test test/*.test.js",
+    "test": "npm run test:unit && npm run test:auth",
+    "test:auth": "vitest --run",
+    "test:unit": "node --test test/*.test.js",
     "test:pnpm": "node --test test/pnpm-consumer.integration.js",
     "prepare": "husky",
     "release": "semantic-release"
   },
   "peerDependencies": {
+    "@tanstack/react-router": "^1.170.0",
+    "axios": "^1.7.0",
     "eslint": "^9.7.0",
+    "oidc-client-ts": "^3.1.0",
     "prettier": "^3.0.0",
+    "react": "^18.3.0 || ^19.0.0",
     "typescript": ">=5.6.0 <6.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@tanstack/react-router": {
+      "optional": true
+    },
+    "axios": {
+      "optional": true
+    },
+    "oidc-client-ts": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@eslint/js": "^9.39.5",
@@ -55,14 +84,24 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.0",
     "@commitlint/config-conventional": "^19.6.0",
+    "@tanstack/react-router": "^1.170.41",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "axios": "^1.20.0",
     "eslint": "^9.39.5",
     "husky": "^9.1.7",
+    "jsdom": "^27.0.0",
     "lint-staged": "^15.2.0",
     "prettier": "^3.9.9",
     "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "semantic-release": "^24.2.0",
     "@semantic-release/exec": "^6.0.3",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.0",
+    "oidc-client-ts": "^3.5.0"
   },
   "commitlint": {
     "extends": [
