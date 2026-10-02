@@ -8,6 +8,8 @@ export {
 } from "./actions.js"
 export {
   createAuthCallbackHandler,
+  type AccountActionStatus,
+  type AuthCallbackNavigation,
   type AuthCallbackOptions,
 } from "./callback.js"
 export {

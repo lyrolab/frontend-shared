@@ -56,7 +56,15 @@ export const InStack = { render: () => <Stack /> }
 `,
   "src/NoMeta.stories.tsx": `export const Lonely = {}
 `,
-  "src/auth.ts": `import { accountActionUrl, type AuthRuntimeConfig } from "@lyrolab/frontend-shared/auth"
+  "src/auth.ts": `import {
+  accountActionUrl,
+  createAuthCallbackHandler,
+  startAccountAction,
+  type AccountActionStatus,
+  type AuthCallbackNavigation,
+  type AuthRuntimeConfig,
+} from "@lyrolab/frontend-shared/auth"
+import type { SigninRedirectArgs, UserManager } from "oidc-client-ts"
 
 const config: AuthRuntimeConfig = {
   authority: "https://identity.example/realms/example",
@@ -65,6 +73,15 @@ const config: AuthRuntimeConfig = {
 }
 
 export const url = accountActionUrl(config)
+export const legacyAction: (config: AuthRuntimeConfig, navigate?: (url: string) => void) => string = startAccountAction
+export const updateProfile = (manager: UserManager, args?: SigninRedirectArgs): Promise<void> =>
+  startAccountAction(manager, "UPDATE_PROFILE", args)
+export const completeCallback = (manager: UserManager) => createAuthCallbackHandler(manager, {
+  navigate: (path: string, result?: AuthCallbackNavigation) => {
+    const status: AccountActionStatus | undefined = result?.accountActionStatus
+    return { path, status }
+  },
+})
 `,
 }
 
@@ -118,7 +135,7 @@ before(() => {
         "@types/react": "^19.0.0",
         axios: "^1.7.0",
         eslint: "^9.0.0",
-        "oidc-client-ts": "^3.1.0",
+        "oidc-client-ts": "3.1.0",
         prettier: "^3.0.0",
         react: "^19.0.0",
         typescript: "~6.0.0",

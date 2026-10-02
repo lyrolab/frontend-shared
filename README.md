@@ -58,6 +58,79 @@ handler with `api.interceptors.request.use(createAuthInterceptor(userManager))`.
 exports `login`, `register`, `logout`, and `startAccountAction`; it never logs tokens and stores
 OIDC state only in memory or `sessionStorage`.
 
+#### Account actions (Keycloak AIA)
+
+Use the same `UserManager` to request an Application Initiated Action. Keep `redirect_uri` at
+the registered OIDC callback; the Account destination belongs in custom state:
+
+```ts
+import {
+  createAuthCallbackHandler,
+  startAccountAction,
+} from "@lyrolab/frontend-shared/auth"
+
+await startAccountAction(userManager, "UPDATE_PASSWORD", {
+  state: { returnTo: "/account" },
+  ui_locales: "fr",
+})
+
+const completeCallback = createAuthCallbackHandler(userManager, {
+  fallbackPath: "/account",
+  navigate: (path, result) => {
+    // Pass only this normalized feedback to the Account page through your router.
+    router.navigate({
+      to: path,
+      search: { accountActionStatus: result?.accountActionStatus },
+      replace: true,
+    })
+  },
+})
+// Call once from the callback route; it also accepts an explicit callback URL.
+await completeCallback()
+```
+
+The signature is `startAccountAction(userManager, kcAction: string, args?: SigninRedirectArgs):
+Promise<void>`. The four T54 actions are `UPDATE_PASSWORD`, `UPDATE_EMAIL`, `CONFIGURE_TOTP`,
+and `UPDATE_PROFILE`. Actions must be enabled in the realm; in particular, check `UPDATE_EMAIL`
+availability and configuration. Other realm-supported action names may also be supplied.
+All caller redirect arguments and extra query parameters are retained, except that the requested
+`kc_action` takes precedence. The helper delegates the authorization request, generated state,
+nonce and PKCE to `oidc-client-ts`; it never builds an authorization URL or sends admin credentials.
+
+To correlate feedback, the helper stores a private envelope containing the action name and the
+original `args.state` in the OIDC transaction store. Use the shared callback helper with this
+overload: it unwraps the original state for local `returnTo` navigation and for the returned
+`User.state`. Direct `signinRedirectCallback` consumers receive the private envelope as state.
+`UserManager` still refreshes, stores and emits the new user/profile through its normal flow.
+The envelope is transaction data, not an identity claim or URL state; it must contain only
+non-sensitive application navigation data.
+
+`AuthCallbackNavigation.accountActionStatus` is optional and uses the exported
+`AccountActionStatus` type: `"success" | "cancelled" | "error"`. The callback captures the URL,
+completes `signinRedirectCallback` first, then reads `kc_action_status` in the configured OIDC
+response mode. Only a stored AIA transaction can expose feedback. Missing, unknown or duplicate
+status parameters and mismatched returned action names produce no feedback. An ordinary login
+with injected action parameters produces no feedback either. Keycloak can return `error` with
+a valid authorization code when an action is disabled or unsupported. OIDC failures, missing
+state and failed code exchanges reject without navigation or action feedback; they are never
+converted into a successful action. Handle callback rejection in the application's auth error UI.
+
+Status is UI feedback, not proof of a changed email/password or enabled MFA. Keycloak action
+parameters are proprietary and are not signed claims. Verify security requirements through
+appropriate identity claims or server-side checks. Forward only normalized status to the Account
+page, never the raw callback URL, code, tokens or provider error descriptions.
+
+Compatibility: existing `navigate(path)` callbacks and `login`/`register`/`logout` remain supported.
+The old `startAccountAction(config, navigate?): string` overload and `accountActionUrl(config)`
+remain available but are deprecated account-console APIs; migrate in-app account pages to the
+UserManager overload. This is an additive minor release. Return paths and `fallbackPath` must
+start with a single `/` and contain no backslashes, whitespace or control characters. Unsafe
+stored return paths use the fallback; an unsafe fallback now throws before callback processing.
+
+References: [Keycloak AIA documentation](https://www.keycloak.org/docs/latest/server_admin/index.html#_application_initiated_actions),
+[Keycloak 26.5 error-status handling](https://github.com/keycloak/keycloak/blob/26.5.0/services/src/main/java/org/keycloak/services/managers/AuthenticationManager.java),
+and [oidc-client-ts custom state](https://authts.github.io/oidc-client-ts/#custom-state-in-user-object).
+
 ### ESLint (`eslint.config.mjs`)
 
 ```js
