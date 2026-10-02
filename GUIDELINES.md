@@ -136,6 +136,26 @@ The **only** place React Query and the API client are touched.
 - Access the client through a single factory that injects the Keycloak bearer token via an axios
   interceptor. Wrapper hooks in `data/queries/` are the only callers.
 
+### 6.1 Shared auth runtime
+
+- Use `@lyrolab/frontend-shared/auth` for OIDC wiring. Supply `authority`, `clientId`, and redirect
+  URLs from runtime deployment configuration; never bake environment-specific identity URLs into
+  an application bundle.
+- Wrap the router in `AuthProvider`, but protect only private routes with `requireAuth(...)` in
+  TanStack Router's `beforeLoad`. The provider never initiates login by itself: public and
+  optional-auth pages must remain usable when `useCurrentUser()` returns `null` and may present a
+  sign-in prompt.
+- Complete the authorization response with `createAuthCallbackHandler`, and keep callback and
+  post-logout URLs on the identity provider's exact allowlist. Return locations must be same-origin
+  paths, never arbitrary URLs.
+- Install `createAuthInterceptor` on the generated client's axios instance. It adds a bearer token
+  only for a live authenticated user and leaves anonymous requests untouched.
+- Tokens and OIDC transaction state may live only in memory or `sessionStorage`. Never put them in
+  `localStorage`, URLs, analytics, errors, debug output, or application logs.
+- Use the exported `login`, `register`, `logout`, and `startAccountAction` helpers instead of
+  constructing provider URLs in UI components. Application-specific login screens and account UI
+  remain in the consuming project.
+
 ## 7. Testing
 
 - **Vitest + Testing Library + MSW**, jsdom environment. Tests are **colocated** next to source
@@ -225,4 +245,6 @@ The **only** place React Query and the API client are touched.
 - [ ] No literal JSX text; new keys added to every locale under the feature namespace.
 - [ ] Co-located story covering every state of a new or changed UI component.
 - [ ] Server state in React Query, client state in Zustand — not mixed.
+- [ ] Protected routes opt in with `requireAuth`; anonymous routes still render without a session.
+- [ ] Auth tokens are never logged and use only memory or `sessionStorage`.
 - [ ] Test colocated, role-based, MSW-backed; passes in CI.

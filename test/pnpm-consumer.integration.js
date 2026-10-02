@@ -56,6 +56,16 @@ export const InStack = { render: () => <Stack /> }
 `,
   "src/NoMeta.stories.tsx": `export const Lonely = {}
 `,
+  "src/auth.ts": `import { accountActionUrl, type AuthRuntimeConfig } from "@lyrolab/frontend-shared/auth"
+
+const config: AuthRuntimeConfig = {
+  authority: "https://identity.example/realms/example",
+  clientId: "consumer",
+  redirectUri: "https://app.example/auth/callback",
+}
+
+export const url = accountActionUrl(config)
+`,
 }
 
 const CONFIGS = {
@@ -104,8 +114,11 @@ before(() => {
       type: "module",
       devDependencies: {
         [presetName]: `file:./${tarball}`,
+        "@tanstack/react-router": "^1.170.0",
         "@types/react": "^19.0.0",
+        axios: "^1.7.0",
         eslint: "^9.0.0",
+        "oidc-client-ts": "^3.1.0",
         prettier: "^3.0.0",
         react: "^19.0.0",
         typescript: "~6.0.0",
@@ -153,6 +166,20 @@ after(() => {
 
 test("tsconfig preset type-checks the sample", () => {
   run(join(dir, "node_modules/.bin/tsc"), ["--noEmit", "-p", "."])
+})
+
+test("auth subpath loads in a Quest-compatible React 19 consumer", () => {
+  const output = run("node", [
+    "--input-type=module",
+    "--eval",
+    `import { accountActionUrl } from "${presetName}/auth";
+     process.stdout.write(accountActionUrl({
+       authority: "https://identity.example/realms/example",
+       clientId: "player",
+       redirectUri: "https://quest.example/auth/callback",
+     }))`,
+  ])
+  assert.match(output.toString(), /\/realms\/example\/account\//)
 })
 
 test("default options lint without i18n or storybook rules", () => {
