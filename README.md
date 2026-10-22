@@ -195,6 +195,47 @@ pnpm's strict, non-hoisted layout without extra installs. `npm run test:pnpm` pr
 the package, installs it into a temporary pnpm project with hoisting disabled, and lints a small
 React + TypeScript sample with the default options and each opt-in.
 
+### Playwright (`playwright.config.ts`)
+
+Install the optional peer in the E2E package: `pnpm add -D @playwright/test`.
+
+```ts
+import { defineConfig } from "@playwright/test"
+import { lyrolabPlaywright } from "@lyrolab/frontend-shared/playwright"
+
+export default defineConfig(lyrolabPlaywright, {
+  testDir: ".",
+  use: { baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000" },
+  expect: {
+    toHaveScreenshot: {
+      ...lyrolabPlaywright.expect?.toHaveScreenshot,
+      stylePath: "./screenshot.css",
+    },
+  },
+  projects: [
+    { name: "setup", testMatch: /setup\/.*\.setup\.ts/ },
+    { name: "chromium", testMatch: /specs\/.*\.spec\.ts/ },
+  ],
+})
+```
+
+`lyrolabPlaywright` is a plain `PlaywrightTestConfig`. `defineConfig` merges top-level keys, `use`
+and `expect` one level deep, and `projects` by name, so spread `expect.toHaveScreenshot` when
+adding to it. Defaults (`CI` set / unset):
+
+| Setting                   | Default                                                                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `forbidOnly`, `retries`   | `true`, `2` / `false`, `0`                                                                                                    |
+| `workers`                 | `2` / `4`; lower it to the size of the test account pool                                                                      |
+| `reporter`                | `list` + `html` (`open: "never"`), plus `github` on CI                                                                        |
+| `updateSnapshots`         | `"none"` / `"default"`                                                                                                        |
+| `snapshotPathTemplate`    | `{testDir}/__screenshots__/{testFilePath}/{arg}{ext}` (no platform suffix)                                                    |
+| `expect.toHaveScreenshot` | `animations: "disabled"`, `caret: "hide"`, `maxDiffPixels: 100`, `threshold: 0.2`                                             |
+| `use`                     | `trace: "on-first-retry"`, `screenshot: "only-on-failure"`, `locale: "en-US"`, `timezoneId: "UTC"`, `serviceWorkers: "block"` |
+| `projects`                | `setup` (`*.setup.ts`), `chromium` (Desktop Chrome, 1280x800) depending on `setup`                                            |
+
+See the E2E section of [`GUIDELINES.md`](./GUIDELINES.md#72-end-to-end-e2e) for the conventions.
+
 ### Prettier (`prettier.config.mjs`)
 
 ```js
