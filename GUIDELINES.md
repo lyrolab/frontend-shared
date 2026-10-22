@@ -3,9 +3,9 @@
 The shared, UI-agnostic architecture contract for Lyrolab web frontends. The ESLint preset in this
 package mechanically enforces the parts that can be enforced; this document is the full contract.
 
-Scope: architecture, data layer, forms, state, testing, UI components, i18n, Storybook, tooling
-and workspaces. Out of scope: which UI library to use and styling conventions — those stay
-per-project.
+Scope: architecture, data layer, forms, state, testing (unit and E2E), UI components, i18n,
+Storybook, tooling and workspaces. Out of scope: which UI library to use and styling conventions —
+those stay per-project.
 
 ---
 
@@ -167,6 +167,8 @@ The **only** place React Query and the API client are touched.
 
 ## 7. Testing
 
+### 7.1 Unit and component
+
 - **Vitest + Testing Library + MSW**, jsdom environment. Tests are **colocated** next to source
   (`Foo.test.tsx` beside `Foo.tsx`).
 - Use a shared `renderWithProviders` / `Wrapper` (router + QueryClient + theme) and **MSW** to
@@ -174,6 +176,34 @@ The **only** place React Query and the API client are touched.
 - **Query by role/accessible name** (`getByRole("button", { name: /…/ })`), not by test id or
   `container`. No snapshot tests of whole trees; no `fireEvent` where `userEvent` fits.
 - The `test` script must run once in CI (`vitest --run`), and **tests must be a CI gate**.
+
+### 7.2 End-to-end (E2E)
+
+- **Playwright Test**, configured with `defineConfig(lyrolabPlaywright, { ... })` from
+  `@lyrolab/frontend-shared/playwright`. App-specific settings only (base URL, test paths, worker
+  cap, `stylePath`); the shared defaults stay shared.
+- **Nominal flows only.** E2E proves the main user journeys still work end to end before a
+  release. Edge cases, validation and error states belong in unit and component tests.
+- **Real stack, production build.** Run against the production build or image of the app with
+  its real API and identity provider, started in CI (e.g. Docker Compose), not a dev server or
+  mocked backend.
+- **Sign in once per account.** A `setup` project signs each account in through the real login
+  form and saves its `storageState`; spec projects depend on `setup` and reuse that state.
+- **One account per parallel worker.** Pick the account from `testInfo.parallelIndex`, so workers
+  never share data. `workers` never exceeds the size of the account pool.
+- **Isolated or read-only state.** A flow asserts and screenshots only state it created itself, or
+  read-only state on a seeded user that no flow mutates. Results never depend on which tests ran
+  earlier on the same worker.
+- **Screenshots only inside the official Playwright Docker image**, version-locked to
+  `@playwright/test`, in CI or locally through Docker. Rendering elsewhere drifts. Baselines
+  carry no platform suffix and are regenerated only in the image, normally by a CI workflow that
+  commits them to the branch.
+- **One masked screenshot per flow** of its end state, with the shared tolerance
+  (`maxDiffPixels: 100`). Mask times, dates, random and user-generated content (`mask`, or a
+  shared `stylePath` stylesheet); never raise `maxDiffPixels` in a spec, mask or await instead.
+- **No date-dependent assertions.** Server time is real; assert nothing that depends on today.
+- **Triggers:** a nightly run on the default branch plus a PR label to run on demand. E2E is too
+  slow to gate every push.
 
 ## 8. UI components
 
@@ -257,3 +287,5 @@ The **only** place React Query and the API client are touched.
 - [ ] Protected routes opt in with `requireAuth`; anonymous routes still render without a session.
 - [ ] Auth tokens are never logged and use only memory or `sessionStorage`.
 - [ ] Test colocated, role-based, MSW-backed; passes in CI.
+- [ ] New E2E flow is nominal, uses its own worker account or read-only seed, and ends with one
+      masked screenshot.
