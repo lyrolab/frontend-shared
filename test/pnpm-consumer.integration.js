@@ -28,6 +28,8 @@ const SOURCES = {
   <p className="greeting-text">Hello {name}</p>
 )
 `,
+  "src/Emoji.tsx": `export const Emoji = () => <span>🎉</span>
+`,
   "src/Greeting.test.tsx": `export const Fixture = () => <div>Plain test text</div>
 `,
   "src/Button.tsx": `export const Button = ({ label }: { label: string }) => (
@@ -94,6 +96,28 @@ const CONFIGS = {
 
 let dir
 
+const oxlintCode = (ruleId) => {
+  const slash = ruleId.lastIndexOf("/")
+  return `${ruleId.slice(0, slash)}(${ruleId.slice(slash + 1)})`
+}
+
+const oxlint = (variant) => {
+  const res = spawnSync(
+    join(dir, "node_modules/.bin/oxlint"),
+    ["--config", `oxlint.${variant}.config.mjs`, "--format", "json", "src"],
+    { cwd: dir, encoding: "utf8" },
+  )
+  assert.ok(
+    res.status === 0 || res.status === 1,
+    `oxlint crashed for "${variant}":\n${res.stderr}`,
+  )
+  const { diagnostics } = JSON.parse(res.stdout)
+  return (file, ruleId) =>
+    diagnostics.filter(
+      (d) => d.filename.endsWith(file) && d.code === oxlintCode(ruleId),
+    )
+}
+
 const run = (cmd, args) => execFileSync(cmd, args, { cwd: dir, stdio: "pipe" })
 
 const lint = (variant) => {
@@ -135,6 +159,7 @@ before(() => {
         "@types/react": "^19.0.0",
         axios: "^1.7.0",
         eslint: "^9.0.0",
+        oxlint: "^1.90.0",
         "oidc-client-ts": "3.1.0",
         prettier: "^3.0.0",
         react: "^19.0.0",
@@ -166,6 +191,10 @@ before(() => {
     writeFileSync(
       join(dir, `eslint.${variant}.config.mjs`),
       `import preset from "${presetName}/eslint"\nexport default preset(${options})\n`,
+    )
+    writeFileSync(
+      join(dir, `oxlint.${variant}.config.mjs`),
+      `import preset from "${presetName}/oxlint"\nexport default preset(${options})\n`,
     )
   }
   mkdirSync(join(dir, "src"))
@@ -239,4 +268,51 @@ test("storybook applies recommended rules and relaxes component rules in stories
     messages("NoMeta.stories.tsx", "storybook/default-exports").length,
     1,
   )
+})
+
+for (const [name, linter] of [
+  ["eslint", lint],
+  ["oxlint", oxlint],
+]) {
+  test(`${name}: the preset's JS plugins resolve under pnpm's strict layout`, () => {
+    const messages = linter("storybook")
+    assert.equal(
+      messages("NoMeta.stories.tsx", "storybook/default-exports").length,
+      1,
+    )
+  })
+}
+
+test("oxlint: default options lint without i18n or storybook rules", () => {
+  const messages = oxlint("default")
+  assert.equal(messages("Greeting.tsx", "i18next/no-literal-string").length, 0)
+  assert.equal(messages("Button.stories.tsx", "react/no-multi-comp").length, 1)
+  assert.equal(
+    messages("NoMeta.stories.tsx", "storybook/default-exports").length,
+    0,
+  )
+})
+
+test("oxlint: i18n flags literal JSX text only, outside tests and stories", () => {
+  const messages = oxlint("i18n")
+  assert.equal(messages("Greeting.tsx", "i18next/no-literal-string").length, 1)
+  assert.equal(messages("Emoji.tsx", "i18next/no-literal-string").length, 0)
+  assert.equal(
+    messages("Greeting.test.tsx", "i18next/no-literal-string").length,
+    0,
+  )
+  assert.equal(
+    messages("Button.stories.tsx", "i18next/no-literal-string").length,
+    0,
+  )
+})
+
+test("oxlint: i18n ignoreWords allows listed words", () => {
+  const messages = oxlint("i18nIgnore")
+  assert.equal(messages("Greeting.tsx", "i18next/no-literal-string").length, 0)
+})
+
+test("oxlint: storybook relaxes component rules in stories", () => {
+  const messages = oxlint("storybook")
+  assert.equal(messages("Button.stories.tsx", "react/no-multi-comp").length, 0)
 })
