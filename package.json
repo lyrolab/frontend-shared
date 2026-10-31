@@ -1,7 +1,7 @@
 {
   "name": "@lyrolab/frontend-shared",
   "version": "0.0.0-semantically-released",
-  "description": "Shared frontend ESLint/Prettier/TypeScript/Playwright presets and architecture guidelines for Lyrolab web apps.",
+  "description": "Shared frontend ESLint/Oxlint/Prettier/Oxfmt/TypeScript/Playwright presets and architecture guidelines for Lyrolab web apps.",
   "type": "module",
   "private": false,
   "license": "UNLICENSED",
@@ -28,11 +28,19 @@
       "types": "./src/eslint/index.d.ts",
       "import": "./src/eslint/index.js"
     },
+    "./oxlint": {
+      "types": "./src/oxlint/index.d.ts",
+      "import": "./src/oxlint/index.js"
+    },
     "./playwright": {
       "types": "./src/playwright/index.d.ts",
       "import": "./src/playwright/index.js"
     },
     "./prettier": "./src/prettier/index.json",
+    "./oxfmt": {
+      "types": "./src/oxfmt/index.d.ts",
+      "import": "./src/oxfmt/index.js"
+    },
     "./tsconfig": "./src/tsconfig/base.json",
     "./guidelines": "./GUIDELINES.md"
   },
@@ -56,6 +64,7 @@
     "axios": "^1.7.0",
     "eslint": "^9.7.0",
     "oidc-client-ts": "^3.1.0",
+    "oxlint": ">=1.90.0 <2",
     "prettier": "^3.0.0",
     "react": "^18.3.0 || ^19.0.0",
     "typescript": ">=5.6.0 <6.1.0"
@@ -70,10 +79,22 @@
     "axios": {
       "optional": true
     },
+    "eslint": {
+      "optional": true
+    },
     "oidc-client-ts": {
       "optional": true
     },
+    "oxlint": {
+      "optional": true
+    },
+    "prettier": {
+      "optional": true
+    },
     "react": {
+      "optional": true
+    },
+    "typescript": {
       "optional": true
     }
   },
@@ -105,6 +126,8 @@
     "jsdom": "^27.0.0",
     "lint-staged": "^15.2.0",
     "oidc-client-ts": "^3.5.0",
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
     "prettier": "^3.9.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

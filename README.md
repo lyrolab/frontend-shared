@@ -1,6 +1,6 @@
 # @lyrolab/frontend-shared
 
-Shared ESLint / Prettier / TypeScript presets and architecture guidelines for Lyrolab web
+Shared ESLint / Oxlint / Prettier / Oxfmt / TypeScript presets and architecture guidelines for Lyrolab web
 frontends. The frontend counterpart to [`@lyrolab/nest-shared`](https://github.com/lyrolab/nest-shared).
 
 ## Install
@@ -187,13 +187,63 @@ i18n: {
 `max-lines-per-function` in those files so decorators and render helpers can live next to the
 stories.
 
+### Oxlint (`oxlint.config.ts`)
+
+The same rules for [Oxlint](https://oxc.rs/docs/guide/usage/linter), with the same options as
+the ESLint preset (`extend` becomes `overrides`). Install the optional peer: `pnpm add -D oxlint`
+(and `oxlint-tsgolint` for `typeChecked`).
+
+```ts
+import { defineConfig } from "oxlint"
+import { lyrolabFrontend } from "@lyrolab/frontend-shared/oxlint"
+
+export default defineConfig(
+  lyrolabFrontend({
+    dataQueryDirs: ["data/queries"],
+    ignores: ["src/routeTree.gen.ts", "src/clients/"],
+    i18n: true,
+    storybook: true,
+    overrides: [
+      {
+        files: ["src/components/ui/**"],
+        rules: { "react/no-multi-comp": "off" },
+      },
+    ],
+  }),
+)
+```
+
+| Option      | Default | Purpose                                                                                           |
+| ----------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `overrides` | `[]`    | Extra Oxlint overrides appended after the preset's. `excludeFiles` narrows an override's `files`. |
+
+The preset turns on Oxlint's `correctness` category and the native ports of the ESLint preset:
+`@eslint/js` and `typescript-eslint` recommended (`typeChecked` adds the type-aware rules and
+`options.typeAware`), the React hooks and React Compiler rules under `react/*`,
+`react/no-multi-comp`, `max-lines-per-function`, and the architecture `no-restricted-imports`
+guardrails. `@tanstack/eslint-plugin-query`, `eslint-plugin-i18next` and
+`eslint-plugin-storybook` run as Oxlint JS plugins under their usual rule names.
+
+It also loads the `lyrolab` JS plugin, whose `lyrolab/restricted-syntax` rule is ESLint's
+`no-restricted-syntax`, which Oxlint does not implement:
+
+```ts
+rules: {
+  "lyrolab/restricted-syntax": [
+    "error",
+    { selector: "Literal[value=/\\bAcme\\b/]", message: "Use productName()." },
+  ],
+},
+```
+
 ### Requirements and pnpm
 
-Peers: `eslint` `^9.7`, `prettier` `^3`, `typescript` `>=5.6 <6.1` (the range supported by
-`typescript-eslint`). Every plugin the preset imports is a regular dependency, so it works under
+Peers, all optional: `eslint` `^9.7`, `prettier` `^3`, `typescript` `>=5.6 <6.1` (the range
+supported by `typescript-eslint`) for the ESLint preset, and `oxlint` `>=1.90 <2` for the Oxlint
+preset. Every plugin the preset imports is a regular dependency, so it works under
 pnpm's strict, non-hoisted layout without extra installs. `npm run test:pnpm` proves it: it packs
 the package, installs it into a temporary pnpm project with hoisting disabled, and lints a small
-React + TypeScript sample with the default options and each opt-in.
+React + TypeScript sample with both presets, the default options and each opt-in.
 
 ### Playwright (`playwright.config.ts`)
 
@@ -241,6 +291,16 @@ See the E2E section of [`GUIDELINES.md`](./GUIDELINES.md#72-end-to-end-e2e) for 
 ```js
 import config from "@lyrolab/frontend-shared/prettier" with { type: "json" }
 export default config
+```
+
+### Oxfmt (`oxfmt.config.ts`)
+
+The Prettier preset's style for [Oxfmt](https://oxc.rs/docs/guide/usage/formatter):
+
+```ts
+import config from "@lyrolab/frontend-shared/oxfmt"
+
+export default { ...config, ignorePatterns: ["src/routeTree.gen.ts"] }
 ```
 
 ### TypeScript (`tsconfig.json`)
